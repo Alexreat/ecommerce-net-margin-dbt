@@ -36,7 +36,7 @@ ownership is about the *decision*, not the implementation.
 - **Cost composition** — **[BIZ]** `total_cost` = supplier buying price + base shipping cost **(C** =
   quantity × board flat rate) + supplier delivery fee **(D** = quantity × per-postcode fee) + fitting
   cost ($0 placeholder). **C and D are distinct costs and both belong.** Built in `int_sales_cost`.
-  - ⚠ **Naming guard:** `base_shipping_cost` = board (**C**); `supplier_delivery_fee` = fee table
+  -  **Naming guard:** `base_shipping_cost` = board (**C**); `supplier_delivery_fee` = fee table
     (**D**). Do not swap them. Both are exposed on the fact for validators.
 - **Zero-revenue handling** — **[ENG?]** revenue = 0 & cost > 0 → `-100%`; revenue = 0 & cost = 0 →
   `0%`. Engineering placeholder, not business-confirmed.
