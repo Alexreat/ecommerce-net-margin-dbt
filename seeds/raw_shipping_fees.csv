@@ -1,0 +1,10 @@
+Supplier,Warehouse,Postal_Code,Shipping_Fee,Matrix
+supplier_a,warehouse_1,A1A,12.00,<= 18
+supplier_a,warehouse_1,A1A,10.00,<= 18
+supplier_a,warehouse_1,A1A,15.00,>= 19
+supplier_a,warehouse_1,B2B,13.00,<= 18
+supplier_a,warehouse_1,K1A,14.00,<= 18
+supplier_a,warehouse_1,M5V,12.50,<= 18
+supplier_b,warehouse_2,B2B,11.00,ALL
+supplier_b,warehouse_2,H2X,16.00,ALL
+supplier_b,warehouse_2,M5V,12.00,ALL

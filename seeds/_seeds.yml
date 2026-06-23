@@ -1,0 +1,28 @@
+version: 2
+
+# These seeds stand in for the raw landed source tables. In a production warehouse
+# they would be `source()` relations (one table per upstream feed); here they are
+# small synthetic CSVs so the whole pipeline builds offline with zero credentials.
+# The data is fictional and designed to exercise every branch of the pipeline:
+# normal margins, DELIVERY (null-margin) lines, an unmapped (NO_MATCH) supplier,
+# out-of-bounds (quarantined) margins, %- and $-path rebates, multi-period
+# effective-dated prices, duplicate keys (to prove the dedup steps), and rows that
+# are filtered out by the status / date-cutoff rules.
+
+seeds:
+  - name: raw_sales
+    description: "Emulated raw sales feed (the order-line spine). Deliberately 'fuzzy': mixed casing, blank suppliers on delivery lines, a pre-cutoff row, a non-INVOICED row, and non-numeric part numbers. Cleaned in stg_sales."
+  - name: raw_supplier_mapping
+    description: "Emulated messy-supplier-name -> clean-supplier dictionary. One row per messy name (a missing match becomes NO_MATCH downstream)."
+  - name: raw_supplier_board
+    description: "Emulated supplier board: one flat base shipping rate per supplier (cost component C)."
+  - name: warehouse_mapping
+    description: "Hand-curated mapping of messy per-supplier warehouse names to the clean warehouse used by the shipping-fee table."
+  - name: raw_shipping_fees
+    description: "Emulated granular per-postcode shipping fee table (cost component D): supplier x warehouse x FSA x rim band -> fee. Contains a duplicate key to exercise the defensive max() dedup."
+  - name: raw_list_prices
+    description: "Emulated manufacturer list prices with per-period effective dates and $0 placeholders. Contains a duplicate (mspn, effective_from) and a non-numeric MSPN to exercise dedup + TRY_CAST."
+  - name: raw_rebates_template
+    description: "Emulated rebate $/% values per (reference, agreement). Contains a duplicate key to exercise the MAX() dedup."
+  - name: raw_rebates_board
+    description: "Emulated rebate agreement status + validity window (drives eligibility)."

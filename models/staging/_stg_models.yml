@@ -1,0 +1,129 @@
+version: 2
+
+models:
+
+  - name: stg_sales
+    description: "Staging model for the sales order-line spine. Normalises raw column names, casing and types; no business filtering happens here."
+    columns:
+      - name: article_id
+        description: "Article identifier from the source sales feed."
+        data_tests:
+          - not_null
+      - name: reference_id
+        description: "Reference identifier; the key used to join sales to rebate agreements."
+      - name: mspn
+        description: "Manufacturer part number, try_cast to a number. The precise product key for the list-price join. NULL on delivery lines and non-numeric (out-of-scope) part numbers."
+      - name: supplier
+        description: "Raw (messy) supplier name as it appears in sales; mapped to a clean name downstream."
+      - name: invoice_date
+        description: "Invoice date. Used for the 2025 data-quality cutoff in int_sales_mapped."
+      - name: line_category
+        description: "Order-line category: ARTICLE, RIM or DELIVERY."
+      - name: sales_status
+        description: "Order-line status; only INVOICED lines are kept downstream."
+      - name: customer_postal_code
+        description: "Customer postal code. The FSA (first 3 chars) is derived from this for the shipping-fee join."
+      - name: rim_diameter
+        description: "Rim diameter, try_cast to a number. Matched against the shipping-fee rim band. NULL on non-tyre lines."
+      - name: warehouse_name
+        description: "Raw (messy) fulfilling warehouse name; mapped to a clean warehouse downstream."
+
+  - name: stg_supplier_board
+    description: "Supplier board shipping reference: one flat rate per supplier; supplies cost component C (base shipping cost). Kept alongside the granular fee table (D)."
+    columns:
+      - name: clean_supplier
+        description: "Clean supplier name used to join sales to board data."
+        data_tests:
+          - not_null
+      - name: base_shipping_charge_per_tyre
+        description: "Board flat shipping rate per tyre (cost component C); multiplied by line quantity downstream."
+
+  - name: stg_supplier_mapping
+    description: "Messy-supplier-name to clean-supplier-name dictionary."
+    columns:
+      - name: messy_sales_name
+        description: "Supplier name as it appears in the sales feed."
+        data_tests:
+          - not_null
+      - name: clean_supplier
+        description: "Clean supplier name used by the board / fee tables."
+        data_tests:
+          - not_null
+      - name: notes
+        description: "Optional free-text notes about the mapping."
+
+  - name: stg_rebates_template
+    description: "Rebate template rows: % and/or $ rebate per reference and agreement number."
+    columns:
+      - name: reference_id
+        description: "Reference identifier used to join rebates to sales."
+        data_tests:
+          - not_null
+      - name: rebate_agreement_number
+        description: "Rebate agreement number from the template."
+      - name: rebate_pct
+        description: "Percentage rebate value (fraction, e.g. 0.05 = 5%)."
+      - name: rebate_amount
+        description: "Fixed dollar rebate value."
+
+  - name: stg_rebates_board
+    description: "Rebate agreement status and validity windows."
+    columns:
+      - name: agreement_number
+        description: "Rebate agreement number."
+        data_tests:
+          - not_null
+      - name: rebate_status
+        description: "Status of the rebate agreement."
+      - name: rebate_start_date
+        description: "Start of the agreement validity window."
+      - name: rebate_end_date
+        description: "End of the agreement validity window."
+
+  - name: stg_list_prices
+    description: "Manufacturer list prices per effective period. Joined to sales on mspn + order_date within the effective window. $0 source prices are nulled (placeholder/unpriced articles)."
+    columns:
+      - name: article_id
+        description: "Manufacturer article identifier from the source feed."
+        data_tests:
+          - not_null
+      - name: mspn
+        description: "Manufacturer part number, try_cast to bigint (NULL on non-numeric values)."
+      - name: manufacturer_name
+        description: "Encoded manufacturer/brand name from the source feed."
+      - name: list_price
+        description: "List price for the period; $0 source values mapped to NULL."
+      - name: effective_from
+        description: "Date this list price becomes effective; drives the as-of period match."
+
+  - name: stg_shipping_fees
+    description: "Granular per-postcode shipping fee table (cost component D). One row per supplier + warehouse + FSA + rim band; max(fee) on duplicate source keys (conservative)."
+    columns:
+      - name: clean_supplier
+        description: "Supplier name; matches sales clean_supplier. Part of the lookup key."
+        data_tests:
+          - not_null
+      - name: warehouse
+        description: "Fulfilling warehouse (uppercased/trimmed). Matches sales clean_warehouse. Part of the lookup key."
+        data_tests:
+          - not_null
+      - name: fsa
+        description: "Forward Sortation Area (first 3 chars of postal code), uppercased/trimmed. Part of the lookup key."
+        data_tests:
+          - not_null
+      - name: rim_min
+        description: "Lower bound (inclusive) of the rim-diameter band parsed from the source Matrix column."
+      - name: rim_max
+        description: "Upper bound (inclusive) of the rim-diameter band parsed from the source Matrix column."
+      - name: shipping_fee
+        description: "Cost component D: per-tyre delivery fee for this supplier/warehouse/FSA/rim band."
+
+  - name: stg_warehouse_mapping
+    description: "Maps the messy per-supplier warehouse name in sales to the clean warehouse used by the shipping-fee table."
+    columns:
+      - name: clean_supplier
+        description: "Supplier the mapping applies to (the same warehouse name can map differently per supplier)."
+      - name: warehouse_name
+        description: "Messy warehouse name as it appears in sales (uppercased/trimmed)."
+      - name: clean_warehouse
+        description: "Clean warehouse name matching the shipping-fee table (uppercased/trimmed)."

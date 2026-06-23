@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: fct_net_margin
+    description: "Net-margin fact: one row per order line per formula version (COMMERCIAL_V1 + FINANCIAL_V1). Both versions share a grain; filter by formula_version in BI."
+    columns:
+      - name: net_margin_pct
+        description: "Net margin %. NULL on DELIVERY lines. Differs by formula_version."
+      - name: revenue
+        description: "Revenue. COMMERCIAL_V1 = sellout + line discount + delivery fee (A) + fitting. FINANCIAL_V1 adds the rebate amount."
+      - name: total_cost
+        description: "Total cost = buying + base shipping (C) + supplier delivery fee (D) + fitting placeholder. Identical for both versions."
+      - name: base_shipping_cost
+        description: "Cost component C (board flat rate x quantity). Exposed for validator audit."
+      - name: supplier_delivery_fee
+        description: "Cost component D (per-postcode fee x quantity). Exposed for validator audit."
+      - name: delivery_customer_charge
+        description: "Customer delivery charge B, net of the per-tyre contribution fee. Audit-only (not summed into revenue). May be negative."
+      - name: delivery_contribution_total
+        description: "Quantity-extended per-tyre contribution fee. Raw audit figure, carried unchanged."
+      - name: net_profit
+        description: "Revenue - total cost, for the row's formula version."
+      - name: rebate_amount
+        description: "Supplier rebate applied (0 for COMMERCIAL_V1; computed for FINANCIAL_V1)."
+      - name: rebate_eligible
+        description: "Yes/No rebate eligibility (NULL for COMMERCIAL_V1)."
+      - name: formula_version
+        description: "COMMERCIAL_V1 or FINANCIAL_V1."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['COMMERCIAL_V1', 'FINANCIAL_V1']

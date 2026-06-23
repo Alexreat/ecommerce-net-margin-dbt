@@ -1,0 +1,43 @@
+name: 'net_margins'
+version: '1.0.0'
+config-version: 2
+
+# This project ships with a local DuckDB profile (see profiles.yml) so it can be
+# cloned and built with zero credentials and no company database.
+profile: 'net_margins'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ---------------------------------------------------------------------------
+# Tunable business/engineering knobs.
+# The *mechanism* of exposing these as vars (instead of hard-coding literals in
+# model SQL) is an engineering decision. The *values* carry their own ownership:
+#   - rebate_valid_statuses / rebate_sales_date_field : business-owned values.
+#   - margin_lower_bound / margin_upper_bound         : provisional engineering
+#                                                       defaults, not yet ratified.
+# Changing a feed's accepted statuses or the quarantine bounds is a config edit
+# here, never a model rewrite.
+# ---------------------------------------------------------------------------
+vars:
+  rebate_valid_statuses: ["4. In Place", "Expired"]
+  rebate_sales_date_field: "order_date"
+  margin_lower_bound: -25
+  margin_upper_bound: 80
+
+models:
+  net_margins:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

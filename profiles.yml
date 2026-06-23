@@ -1,0 +1,11 @@
+# Local DuckDB profile — no credentials, no external warehouse.
+# Build from the project root with:
+#   dbt build --profiles-dir .
+# (or copy this file to ~/.dbt/profiles.yml and just run `dbt build`)
+net_margins:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: net_margins.duckdb
+      threads: 4

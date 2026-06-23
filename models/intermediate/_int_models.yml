@@ -1,0 +1,155 @@
+version: 2
+
+models:
+
+  - name: int_sales_mapped
+    description: "Maps raw sales supplier/warehouse names to clean names (NO_MATCH fallback) and applies the in-scope category/status/date filters."
+    columns:
+      - name: clean_supplier
+        description: "Clean supplier name, or NO_MATCH when no mapping exists."
+        data_tests:
+          - not_null
+
+  - name: int_quarantine_orphaned_sales
+    description: "Quarantine of mapped sales rows where no supplier mapping was found (clean_supplier = NO_MATCH)."
+    columns:
+      - name: clean_supplier
+        description: "Fallback clean supplier value; expected to be NO_MATCH here."
+        data_tests:
+          - not_null
+
+  - name: int_sales_enriched
+    description: "Mapped sales rows with a valid supplier (plus DELIVERY lines), enriched with both shipping costs (C board + D fee), the derived FSA and the net customer delivery charge (B)."
+    columns:
+      - name: clean_supplier
+        description: "Clean supplier name used to join board/fee data."
+        data_tests:
+          - not_null
+      - name: base_shipping_cost
+        description: "Cost C: line quantity x supplier board flat rate per tyre."
+      - name: supplier_delivery_fee
+        description: "Cost D: line quantity x per-postcode shipping fee."
+      - name: delivery_customer_charge
+        description: "Revenue input B (audit-only): line quantity x (per-tyre delivery fee - per-tyre contribution fee). May be negative."
+
+  - name: int_sales_revenue
+    description: "Commercial revenue per line (sellout + line discount + delivery fee A + fitting). B is excluded by design."
+    columns:
+      - name: revenue
+        description: "Commercial revenue."
+        data_tests:
+          - not_null
+
+  - name: int_sales_cost
+    description: "Total cost per line (buying + base shipping C + supplier delivery fee D + fitting placeholder)."
+    columns:
+      - name: total_cost
+        description: "Total cost."
+        data_tests:
+          - not_null
+
+  - name: int_sales_profit
+    description: "Net profit per line (revenue - total cost)."
+    columns:
+      - name: net_profit
+        description: "Net profit."
+        data_tests:
+          - not_null
+
+  - name: int_sales_margin
+    description: "Commercial net margin %, with DELIVERY null and zero-revenue fallback rules."
+    columns:
+      - name: net_margin_pct
+        description: "Commercial net margin percentage (NULL on DELIVERY lines)."
+
+  - name: int_quarantine_suspicious_margins
+    description: "Quarantine of rows whose margin is above the upper bound, below the lower bound, or NULL on a non-DELIVERY line."
+    columns:
+      - name: quarantine_reason
+        description: "Why the row was quarantined (MARGIN_TOO_HIGH / MARGIN_TOO_LOW / MARGIN_NULL)."
+        data_tests:
+          - not_null
+
+  - name: int_net_margin_clean
+    description: "Clean COMMERCIAL_V1 margin rows within bounds (plus DELIVERY). Union-compatible with the financial clean model."
+    columns:
+      - name: net_margin_pct
+        description: "Commercial net margin percentage."
+      - name: formula_version
+        description: "Always COMMERCIAL_V1 for this model."
+        data_tests:
+          - not_null
+
+  - name: int_rebate_template_deduped
+    description: "Rebate template deduplicated to one row per (reference, agreement) via MAX()."
+    columns:
+      - name: reference_id
+        description: "Reference identifier used to join rebates to sales."
+        data_tests:
+          - not_null
+
+  - name: int_rebate_dictionary
+    description: "Deduplicated rebate values joined to agreement status + validity window. One row per reference."
+    columns:
+      - name: reference_id
+        description: "Reference identifier used to join rebates to sales."
+        data_tests:
+          - not_null
+
+  - name: int_list_prices_periods
+    description: "List prices as effective-dated periods: one row per (mspn, effective_from) with valid_to = next period start (NULL = current). Drives the as-of price match."
+    columns:
+      - name: mspn
+        description: "Manufacturer part number (numeric)."
+        data_tests:
+          - not_null
+      - name: list_price
+        description: "List price for this period (NULL when only placeholder $0 prices existed)."
+      - name: valid_to
+        description: "Start of the next price period for this product; NULL if this is the current period."
+
+  - name: int_sales_rebate_inputs
+    description: "Costed sales rows with rebate dictionary + as-of list price attached, ready for eligibility/amount."
+    columns:
+      - name: list_price
+        description: "List price matched as-of the order date, for the % rebate path."
+
+  - name: int_sales_rebate_eligibility
+    description: "Applies the rebate eligibility rule (status + date window + something to pay)."
+    columns:
+      - name: rebate_eligible
+        description: "Yes/No eligibility flag."
+        data_tests:
+          - not_null
+
+  - name: int_sales_rebate_amount
+    description: "Rebate amount for eligible rows. % path wins over $ path when both are present."
+    columns:
+      - name: rebate_amount
+        description: "Calculated rebate amount (0 when not eligible)."
+        data_tests:
+          - not_null
+
+  - name: int_sales_financial_revenue
+    description: "Financial revenue = commercial revenue + rebate amount."
+    columns:
+      - name: financial_revenue
+        description: "Rebate-inclusive revenue."
+        data_tests:
+          - not_null
+
+  - name: int_sales_financial_margin
+    description: "Financial net margin %, on rebate-inclusive revenue."
+    columns:
+      - name: financial_net_margin_pct
+        description: "Financial net margin percentage (NULL on DELIVERY lines)."
+
+  - name: int_financial_net_margin_clean
+    description: "Clean FINANCIAL_V1 margin rows within bounds (plus DELIVERY). Union-compatible with the commercial clean model."
+    columns:
+      - name: net_margin_pct
+        description: "Financial net margin percentage."
+      - name: formula_version
+        description: "Always FINANCIAL_V1 for this model."
+        data_tests:
+          - not_null

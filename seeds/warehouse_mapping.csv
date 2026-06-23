@@ -1,0 +1,5 @@
+clean_supplier,warehouse_name,clean_warehouse
+supplier_a,WH A1,warehouse_1
+supplier_a,WAREHOUSE 1,warehouse_1
+supplier_b,WH B1,warehouse_2
+supplier_b,B-DEPOT,warehouse_2
